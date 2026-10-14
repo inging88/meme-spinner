@@ -3,7 +3,7 @@ import type { EngineInterface, Register, Timer } from 'claude-code'
 // 밈 목록의 정본은 GitHub 저장소의 memes.json 이다. 거기를 고치면 설치한 사람도 재설치 없이 받는다
 const REMOTE = 'https://raw.githubusercontent.com/inging88/meme-spinner/main/memes.json'
 const REFRESH_MS = 6 * 60 * 60 * 1000 // 6시간마다 새 목록을 받는다
-const ROTATE_MS = 4000 // 작업 중 4초마다 다른 밈
+const ROTATE_MS = 8000 // 작업 중 8초마다 다른 밈 (4초는 빠르다는 의견, 10-14)
 const STORE_KEY = 'memes'
 const MAX_MEMES = 500
 const MAX_TEXT = 40
