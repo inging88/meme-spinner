@@ -32,3 +32,7 @@ claude plugin install meme-spinner --marketplace inging88/meme-spinner
 ## 요구 사항
 
 mod(함수 훅 플러그인)를 지원하는 Claude Code. 2.1.299 에서 확인했습니다.
+
+## 지금 바로 받기
+
+`/meme-refresh` 를 입력하면 6시간을 기다리지 않고 바로 새 목록을 받습니다.

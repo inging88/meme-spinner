@@ -47,13 +47,13 @@ async function bundled($: Dollar): Promise<Meme[]> {
   }
 }
 
-async function refresh($: Dollar) {
+async function refresh($: Dollar, force = false): Promise<number> {
   const now = await $.clock.now()
   const cached = (await $.store.get(STORE_KEY).catch(() => undefined)) as Cached | undefined
 
   if (cached && Array.isArray(cached.memes) && cached.memes.length > 0) {
     memes = cached.memes
-    if (now - cached.at < REFRESH_MS) return
+    if (!force && now - cached.at < REFRESH_MS) return 0
   } else {
     const own = await bundled($)
     if (own.length > 0) memes = own
@@ -66,13 +66,15 @@ async function refresh($: Dollar) {
       memes = fresh
       await $.store.set(STORE_KEY, { at: now, memes: fresh } satisfies Cached)
     }
+    return fresh.length
   } catch {
     // 오프라인이면 갖고 있는 목록으로 계속 간다
+    return 0
   }
 }
 
 function ensureLoaded($: Dollar) {
-  loading ??= refresh($).catch(() => undefined)
+  loading ??= refresh($).then(() => undefined, () => undefined)
   return loading
 }
 
@@ -92,6 +94,18 @@ function stop() {
 }
 
 export const register: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.command.register({ name: 'meme-refresh', description: '밈 목록을 GitHub 에서 지금 바로 새로 받는다' })
+    return next(e)
+  })
+
+  // 6시간을 기다리지 않고 지금 받는다
+  on('command.run', { command: 'meme-refresh' }, async $ => {
+    const n = await refresh($, true)
+    loading = Promise.resolve()
+    return { text: n > 0 ? `밈 ${n}개를 새로 받았습니다.` : `새로 받지 못했습니다(오프라인?). 지금 목록 ${memes.length}개로 계속합니다.` }
+  })
+
   on('turn.start', async ($, e, next) => {
     const result = await next(e)
 
