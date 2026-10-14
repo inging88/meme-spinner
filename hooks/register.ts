@@ -22,7 +22,12 @@ const FALLBACK: Meme[] = [
 
 let memes: Meme[] = FALLBACK
 let loading: Promise<void> | undefined
-let index = Math.floor(Math.random() * FALLBACK.length)
+let current: Meme = FALLBACK[0]!
+// 셔플 가방: 목록을 섞어 하나씩 꺼내고, 다 꺼낸 뒤에야 다시 섞는다. 한 바퀴 안에서는 같은 밈이 두 번 안 나온다.
+// 남은 순서를 $.store 에 두어 재시작 · 다시 불러오기 뒤에도 이어 간다
+let bag: string[] = []
+let bagLoaded = false
+const BAG_KEY = 'bag'
 let timer: Timer | undefined
 
 // 남이 올린 목록이라도 화면을 깨지 않게: 문자열만, 길이 제한, 개수 제한
@@ -63,6 +68,7 @@ async function refresh($: Dollar, force = false): Promise<number> {
     const r = await $.http.fetch(REMOTE)
     const fresh = r.ok ? sanitize(JSON.parse(r.text)) : []
     if (fresh.length > 0) {
+      if (fresh.map(m => m.text).join('|') !== memes.map(m => m.text).join('|')) bag = []
       memes = fresh
       await $.store.set(STORE_KEY, { at: now, memes: fresh } satisfies Cached)
     }
@@ -78,14 +84,31 @@ function ensureLoaded($: Dollar) {
   return loading
 }
 
-function nextMeme() {
-  if (memes.length < 2) {
-    index = 0
-    return
+function shuffle(texts: string[]): string[] {
+  const a = [...texts]
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j]!, a[i]!]
   }
-  let n = index
-  while (n === index) n = Math.floor(Math.random() * memes.length)
-  index = n
+  // 새 바퀴의 첫 밈이 직전 밈과 같지 않게
+  if (a.length > 1 && a[0] === current.text) [a[0], a[1]] = [a[1]!, a[0]!]
+  return a
+}
+
+async function nextMeme($: Dollar) {
+  if (!bagLoaded) {
+    bagLoaded = true
+    const saved = await $.store.get(BAG_KEY).catch(() => undefined)
+    if (Array.isArray(saved)) bag = saved.filter((t): t is string => typeof t === 'string')
+  }
+
+  const byText = new Map(memes.map(m => [m.text, m]))
+  // 목록이 바뀌어 없어진 밈은 가방에서 버린다
+  bag = bag.filter(t => byText.has(t))
+  if (bag.length === 0) bag = shuffle(memes.map(m => m.text))
+
+  current = byText.get(bag.shift()!) ?? FALLBACK[0]!
+  void $.store.set(BAG_KEY, bag).catch(() => undefined)
 }
 
 function stop() {
@@ -110,12 +133,11 @@ export const register: Register = on => {
     const result = await next(e)
 
     if (e.agentId === undefined) {
-      void ensureLoaded($)
-      nextMeme()
+      await ensureLoaded($)
+      await nextMeme($)
       stop()
       timer = $.clock.every(ROTATE_MS, () => {
-        nextMeme()
-        $.ui.invalidate('ui.render')
+        void nextMeme($).then(() => $.ui.invalidate('ui.render'))
       })
     }
 
@@ -139,7 +161,7 @@ export const register: Register = on => {
     // 압축 중 같은 상태 문구는 엔진 것을 그대로 둔다
     if (p.message !== null) return next(e)
 
-    const m = memes[index % memes.length] ?? FALLBACK[0]!
+    const m = current
     // 이모티콘은 반짝이는 단어 밖(suffix)에 둔다: 단어 안에 두면 반짝임 색에 묻힌다
     return next({ ...e, props: { ...p, word: m.text, suffix: ` ${m.emoji}…` } })
   })
