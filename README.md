@@ -36,3 +36,14 @@ mod(함수 훅 플러그인)를 지원하는 Claude Code. 2.1.299 에서 확인�
 ## 지금 바로 받기
 
 `/meme-refresh` 를 입력하면 6시간을 기다리지 않고 바로 새 목록을 받습니다.
+
+## 업데이트
+
+`/meme-refresh` 가 안 보이면 예전 판(0.1.0)입니다. 셸에서:
+
+```
+claude plugin marketplace update meme-spinner
+claude plugin update meme-spinner@meme-spinner
+```
+
+그다음 Claude Code 를 다시 시작하거나 `/reload-plugins` 를 실행하세요.

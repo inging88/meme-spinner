@@ -111,6 +111,18 @@ async function nextMeme($: Dollar) {
   void $.store.set(BAG_KEY, bag).catch(() => undefined)
 }
 
+// 세션 도중 /plugin install 로 받으면 session.start 가 오지 않는다: 첫 턴 · 첫 그림에서도 등록한다
+let commandRegistered = false
+async function registerCommand($: Dollar) {
+  if (commandRegistered) return
+  commandRegistered = true
+  try {
+    await $.command.register({ name: 'meme-refresh', description: '밈 목록을 GitHub 에서 지금 바로 새로 받는다' })
+  } catch {
+    commandRegistered = false
+  }
+}
+
 function stop() {
   timer?.cancel()
   timer = undefined
@@ -118,7 +130,7 @@ function stop() {
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'meme-refresh', description: '밈 목록을 GitHub 에서 지금 바로 새로 받는다' })
+    await registerCommand($)
     return next(e)
   })
 
@@ -133,6 +145,7 @@ export const register: Register = on => {
     const result = await next(e)
 
     if (e.agentId === undefined) {
+      await registerCommand($)
       await ensureLoaded($)
       await nextMeme($)
       stop()
@@ -155,6 +168,7 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => {
+    void registerCommand($)
     await ensureLoaded($)
     const p = e.props
 

@@ -1,6 +1,6 @@
 {
   "name": "meme-spinner",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "작업 중 스피너 문구를 한국 밈 + 이모티콘으로 4초마다 바꾸고, 밈 목록은 GitHub 에서 주기적으로 새로 받는다",
   "author": { "name": "inging88" }
 }

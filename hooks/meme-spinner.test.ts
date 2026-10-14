@@ -69,3 +69,14 @@ test('한 바퀴 안에서는 같은 밈이 두 번 나오지 않는다', async 
   }
   expect([...seen].sort()).toEqual(['둘', '셋', '하나'])
 })
+
+test('세션 도중 설치해도 첫 턴에 /meme-refresh 를 등록한다', async ($, on) => {
+  engine(on)
+  const names: string[] = []
+  on('command.register', ($, e, next) => {
+    names.push(e.name)
+    return next(e)
+  })
+  await $.turn.start({ text: '해 줘', turnId: 'r1' } as never)
+  expect(names).toContain('meme-refresh')
+})
